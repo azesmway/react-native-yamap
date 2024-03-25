@@ -6,7 +6,7 @@ import {
   UIManager,
   findNodeHandle,
   ViewProps,
-  ImageSourcePropType, NativeSyntheticEvent,
+  ImageSourcePropType, NativeSyntheticEvent, View,
 } from 'react-native';
 // @ts-ignore
 import resolveAssetSource from 'react-native/Libraries/Image/resolveAssetSource';
@@ -16,7 +16,7 @@ import { processColorProps } from '../utils';
 
 const { yamap: NativeYamapModule } = NativeModules;
 
-export interface YaMapProps extends ViewProps {
+export interface YaMapProps<T = any> extends ViewProps {
   userLocationIcon?: ImageSourcePropType;
   showUserPosition?: boolean;
   nightMode?: boolean;
@@ -32,14 +32,18 @@ export interface YaMapProps extends ViewProps {
   tiltGesturesEnabled?: boolean;
   rotateGesturesEnabled?: boolean;
   clusteredMap?: boolean;
+  clusterColor?: string;
+  clusteredMarkers?: ReadonlyArray<{point: Point, data: T}>
+  onMarkerPress?: (event: NativeSyntheticEvent<Point>) => void;
 }
 
-const YaMapNativeComponent = requireNativeComponent<YaMapProps>('YamapView');
+const YaMapNativeComponent = requireNativeComponent<Omit<YaMapProps, 'clusteredMarkers'> & {clusteredMarkers: Point[]}>('YamapView');
 
 export class YaMap extends React.Component<YaMapProps> {
   static defaultProps = {
     showUserPosition: true,
-    clusteredMap: false
+    clusteredMap: false,
+    clusterColor: '#0C5485'
   };
 
   // @ts-ignore
@@ -100,6 +104,14 @@ export class YaMap extends React.Component<YaMapProps> {
       findNodeHandle(this),
       this.getCommand('fitAllMarkers'),
       [],
+    );
+  }
+
+  public fitMarkers(points: Point[]) {
+    UIManager.dispatchViewManagerCommand(
+      findNodeHandle(this),
+      this.getCommand('fitMarkers'),
+      [points]
     );
   }
 
@@ -195,11 +207,13 @@ export class YaMap extends React.Component<YaMapProps> {
   private getProps() {
     const props = {
       ...this.props,
+      clusteredMarkers: this.props.clusteredMarkers && this.props.clusteredMarkers.map(mark => mark.point),
       onRouteFound: this.processRoute,
       onCameraPositionReceived: this.processCameraPosition,
       onVisibleRegionReceived: this.processVisibleRegion,
       userLocationIcon: this.props.userLocationIcon ? this.resolveImageUri(this.props.userLocationIcon) : undefined,
     };
+    processColorProps(props, 'clusterColor' as keyof YaMapProps);
     processColorProps(props, 'userLocationAccuracyFillColor' as keyof YaMapProps);
     processColorProps(props, 'userLocationAccuracyStrokeColor' as keyof YaMapProps);
     return props;

@@ -15,12 +15,16 @@
 RCT_EXPORT_MODULE()
 
 - (NSArray<NSString *> *)supportedEvents {
-    return @[@"onRouteFound", @"onCameraPositionReceived", @"onVisibleRegionReceived", @"onCameraPositionChange", @"onMapPress", @"onMapLongPress"];
+    return @[@"onRouteFound", @"onCameraPositionReceived", @"onVisibleRegionReceived", @"onCameraPositionChange", @"onMapPress", @"onMapLongPress", @"onMarkerPress"];
 }
 
 - (instancetype)init {
     self = [super init];
     return self;
+}
+
++ (BOOL)requiresMainQueueSetup {
+    return YES;
 }
 
 - (UIView *_Nullable)view {
@@ -40,6 +44,7 @@ RCT_EXPORT_VIEW_PROPERTY(onVisibleRegionReceived, RCTBubblingEventBlock)
 RCT_EXPORT_VIEW_PROPERTY(onCameraPositionChange, RCTBubblingEventBlock)
 RCT_EXPORT_VIEW_PROPERTY(onMapPress, RCTBubblingEventBlock)
 RCT_EXPORT_VIEW_PROPERTY(onMapLongPress, RCTBubblingEventBlock)
+RCT_EXPORT_VIEW_PROPERTY(onMarkerPress, RCTBubblingEventBlock)
 
 RCT_CUSTOM_VIEW_PROPERTY(userLocationAccuracyFillColor, NSNumber, RNYMView) {
     [view setUserLocationAccuracyFillColor: [RCTConvert UIColor:json]];
@@ -70,6 +75,12 @@ RCT_CUSTOM_VIEW_PROPERTY(showUserPosition, BOOL, RNYMView) {
 RCT_CUSTOM_VIEW_PROPERTY(nightMode, BOOL, RNYMView) {
     if (view) {
         [view setNightMode: json ? [json boolValue]: NO];
+    }
+}
+
+RCT_CUSTOM_VIEW_PROPERTY(clusterColor, NSNumber, RNYMView) {
+    if (view) {
+        [view setClusterColor:[RCTConvert UIColor:json]];
     }
 }
 
@@ -109,6 +120,12 @@ RCT_CUSTOM_VIEW_PROPERTY(clusteredMap, BOOL, RNYMView) {
     }
 }
 
+RCT_CUSTOM_VIEW_PROPERTY(clusteredMarkers, NSArray<YMKRequestPoint*>*_Nonnull, RNYMView) {
+    if (view) {
+        [view setClusteredMarkers:[RCTConvert NSArray:json]];
+    }
+}
+
 // ref
 RCT_EXPORT_METHOD(fitAllMarkers:(nonnull NSNumber*) reactTag) {
     [self.bridge.uiManager addUIBlock:^(RCTUIManager *uiManager, NSDictionary<NSNumber *,UIView *> *viewRegistry) {
@@ -131,7 +148,12 @@ RCT_EXPORT_METHOD(findRoutes:(nonnull NSNumber*) reactTag json:(NSDictionary*) j
         NSArray<YMKPoint*>* points = [RCTConvert Points:json[@"points"]];
         NSMutableArray<YMKRequestPoint*>* requestPoints = [[NSMutableArray alloc] init];
         for (int i = 0; i < [points count]; ++i) {
-            YMKRequestPoint * requestPoint = [YMKRequestPoint requestPointWithPoint:[points objectAtIndex:i] type: YMKRequestPointTypeWaypoint pointContext:nil];
+            YMKRequestPoint * requestPoint = [YMKRequestPoint
+                                              requestPointWithPoint:[points objectAtIndex:i]
+                                              type: YMKRequestPointTypeWaypoint
+                                              pointContext:nil
+                                              drivingArrivalPointId:@""];
+
             [requestPoints addObject:requestPoint];
         }
         NSArray<NSString*>* vehicles = [RCTConvert Vehicles:json[@"vehicles"]];
@@ -180,6 +202,20 @@ RCT_EXPORT_METHOD(getVisibleRegion:(nonnull NSNumber*) reactTag _id:(NSString*_N
             return;
         }
         [view emitVisibleRegionToJS:_id];
+    }];
+}
+
+RCT_EXPORT_METHOD(fitMarkers:(nonnull NSNumber *)reactTag json:(id)json) {
+    [self.bridge.uiManager addUIBlock:^(RCTUIManager *uiManager, NSDictionary<NSNumber *, UIView*> *viewRegistry) {
+        RNYMView *view = (RNYMView *)viewRegistry[reactTag];
+
+        if (!view || ![view isKindOfClass:[RNYMView class]]) {
+            RCTLogError(@"Cannot find NativeView with tag #%@", reactTag);
+            return;
+        }
+
+        NSArray<YMKPoint *> *points = [RCTConvert Points:json];
+        [view fitMarkers: points];
     }];
 }
 

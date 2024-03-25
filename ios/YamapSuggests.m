@@ -11,17 +11,21 @@
 
 -(id)init {
     self = [super init];
-    
+
     YMKPoint* southWestPoint = [YMKPoint pointWithLatitude:-90.0 longitude:-180.0];
     YMKPoint* northEastPoint = [YMKPoint pointWithLatitude:90.0 longitude:180.0];
     defaultBoundingBox = [YMKBoundingBox boundingBoxWithSouthWest:southWestPoint northEast:northEastPoint];
     suggestOptions = [YMKSuggestOptions suggestOptionsWithSuggestTypes: YMKSuggestTypeGeo
                                                                              userPosition:nil
                                                                              suggestWords:true];
-    
+
     searchManager = [[YMKSearch sharedInstance] createSearchManagerWithSearchManagerType:YMKSearchSearchManagerTypeOnline];
-    
+
     return self;
+}
+
++ (BOOL)requiresMainQueueSetup {
+    return YES;
 }
 
 // TODO: Этот метод можно вынести в отдельный файл утилей, но пока в этом нет необходимости.
@@ -55,7 +59,7 @@ RCT_EXPORT_METHOD(suggest:(nonnull NSString*) searchQuery
                 rejecter:(RCTPromiseRejectBlock) reject {
     @try {
         YMKSearchSuggestSession* session = [self getSuggestClient];
-        
+
         dispatch_async(dispatch_get_main_queue(), ^{
             [session suggestWithText:searchQuery
                               window:self->defaultBoundingBox
@@ -65,18 +69,18 @@ RCT_EXPORT_METHOD(suggest:(nonnull NSString*) searchQuery
                     reject(ERR_SUGGEST_FAILED, [NSString stringWithFormat:@"search request: %@", searchQuery], error);
                     return;
                 }
-                
+
                 NSMutableArray *suggestsToPass = [NSMutableArray new];
                 for (YMKSuggestItem* suggest in suggestList) {
                     NSMutableDictionary *suggestToPass = [NSMutableDictionary new];
-                    
+
                     [suggestToPass setValue:[[suggest title] text] forKey:@"title"];
                     [suggestToPass setValue:[[suggest subtitle] text] forKey:@"subtitle"];
                     [suggestToPass setValue:[suggest uri] forKey:@"uri"];
-                    
+
                     [suggestsToPass addObject:suggestToPass];
                 }
-                
+
                 resolve(suggestsToPass);
             }];
         });

@@ -15,6 +15,8 @@ import com.yandex.mapkit.MapKitFactory;
 import com.yandex.mapkit.geometry.Point;
 import com.yandex.mapkit.map.CameraPosition;
 
+import org.json.JSONException;
+
 import java.util.ArrayList;
 import java.util.Map;
 
@@ -57,6 +59,7 @@ public class YamapViewManager extends ViewGroupManager<YamapView> {
                 .put("cameraPositionChanged", MapBuilder.of("phasedRegistrationNames", MapBuilder.of("bubbled", "onCameraPositionChange")))
                 .put("visibleRegion", MapBuilder.of("phasedRegistrationNames", MapBuilder.of("bubbled", "onVisibleRegionReceived")))
                 .put("onMapPress", MapBuilder.of("phasedRegistrationNames", MapBuilder.of("bubbled", "onMapPress")))
+                .put("onMarkerPress", MapBuilder.of("phasedRegistrationNames", MapBuilder.of("bubbled", "onMarkerPress")))
                 .put("onMapLongPress", MapBuilder.of("phasedRegistrationNames", MapBuilder.of("bubbled", "onMapLongPress")))
                 .build();
     }
@@ -75,9 +78,6 @@ public class YamapViewManager extends ViewGroupManager<YamapView> {
                 return;
             case "fitAllMarkers":
                 fitAllMarkers(view);
-                return;
-            case "updateCluster":
-                updateCluster(view);
                 return;
             case "findRoutes":
                 if (args != null) {
@@ -137,10 +137,6 @@ public class YamapViewManager extends ViewGroupManager<YamapView> {
         castToYaMapView(view).fitAllMarkers();
     }
 
-    private void updateCluster(View view) {
-        castToYaMapView(view).updateCluster();
-    }
-
     private void findRoutes(View view, ReadableArray jsPoints, ReadableArray jsVehicles, String id) {
         if (jsPoints != null) {
             ArrayList<Point> points = new ArrayList<>();
@@ -166,6 +162,11 @@ public class YamapViewManager extends ViewGroupManager<YamapView> {
         if (icon != null) {
             castToYaMapView(view).setUserLocationIcon(icon);
         }
+    }
+
+    @ReactProp(name = "clusteredMarkers")
+    public void setClusteredMarkers(View view, ReadableArray points) throws JSONException {
+        castToYaMapView(view).setClusteredMarkers(points.toArrayList());
     }
 
     @ReactProp(name = "userLocationAccuracyFillColor")
@@ -196,6 +197,11 @@ public class YamapViewManager extends ViewGroupManager<YamapView> {
     @ReactProp(name = "clusteredMap")
     public void setClusteredMap(View view, Boolean clusteredMap) {
         castToYaMapView(view).setClusteredMap(clusteredMap != null ? clusteredMap : false);
+    }
+
+    @ReactProp(name = "clusterColor")
+    public void setClusteredColor(View view, int clusterColor) {
+        castToYaMapView(view).setClusteredColor(clusterColor);
     }
 
     @ReactProp(name = "scrollGesturesEnabled")
